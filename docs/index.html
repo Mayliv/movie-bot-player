@@ -13,7 +13,7 @@
             overflow: hidden;
             background: #000;
         }
-        .kinobox_player {
+        #kinobox_player {
             width: 100%;
             height: 100vh;
         }
@@ -23,33 +23,18 @@
     <div id="kinobox_player"></div>
     <script src="https://kinobox.tv/kinobox.min.js"></script>
     <script>
-        window.onload = function() {
-            // Получаем параметры из URL
+        document.addEventListener('DOMContentLoaded', function() {
             const urlParams = new URLSearchParams(window.location.search);
             const kinopoiskId = urlParams.get('kp');
-            const title = urlParams.get('title');
-
-            console.log('KinopoiskId:', kinopoiskId);
-            console.log('Title:', title);
-
-            // Настраиваем плеер
-            new Kinobox('#kinobox_player', {
-                search: {
-                    kinopoisk: kinopoiskId,
-                    title: title
-                },
-                menu: {
-                    default: 'menuList',
-                    mobile: 'menuButton',
-                    format: '{N} :: {T} ({Q})',
-                    limit: null,
-                    open: true
-                },
-                players: ['kodik', 'videocdn', 'collaps', 'hdvb'],
-                autoplay: true,
-                loader: true
-            }).init();
-        };
+            
+            console.log('Loading player for KinopoiskId:', kinopoiskId);
+            
+            let player = new Kinobox('#kinobox_player').init();
+            
+            if (kinopoiskId) {
+                player.search = { kinopoisk: kinopoiskId };
+            }
+        });
     </script>
 </body>
 </html>
