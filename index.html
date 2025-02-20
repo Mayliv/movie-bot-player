@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Player</title>
+    <script src="https://kinobox.tv/kinobox.min.js"></script>
+</head>
+<body>
+    <div id="player"></div>
+    <script>
+        // Получаем IMDB ID из URL (например, ?imdb=tt1375666)
+        var imdbId = getParameterByName('imdb');
+        if (imdbId) {
+            kbox('#player', {
+                search: {
+                    imdb: imdbId // Используем IMDB ID для поиска фильма
+                },
+                menu: {
+                    enable: true // Включаем меню для сериалов
+                }
+            });
+        } else {
+            document.body.innerHTML = "<p>Ошибка: Укажите IMDB ID в URL!</p>";
+        }
+
+        // Функция для извлечения параметров из URL
+        function getParameterByName(name) {
+            var url = window.location.href;
+            name = name.replace(/[\[\]]/g, '\\$&');
+            var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+                results = regex.exec(url);
+            if (!results) return null;
+            if (!results[2]) return '';
+            return decodeURIComponent(results[2].replace(/\+/g, ' '));
+        }
+    </script>
+</body>
+</html>
