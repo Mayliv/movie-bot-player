@@ -34,7 +34,7 @@
             padding: 20px;
             font-family: Arial, sans-serif;
         }
-        #fullscreen-button {
+        #custom-fullscreen-button {
             position: fixed;
             bottom: 20px;
             right: 20px;
@@ -77,6 +77,30 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        
+        /* CSS для имитации полноэкранного режима */
+        .fake-fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            z-index: 9999 !important;
+            background: #000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            overflow: hidden !important;
+        }
+        
+        .fake-fullscreen iframe {
+            width: 100% !important;
+            height: 100% !important;
+        }
     </style>
     <script src="https://kinobox.tv/kinobox.min.js"></script>
 </head>
@@ -86,39 +110,9 @@
         <div>Загрузка плеера...</div>
     </div>
     <div id="player"></div>
-    <button id="fullscreen-button" title="Полный экран">⛶</button>
+    <button id="custom-fullscreen-button" title="Полный экран">⛶</button>
     
     <script>
-        // Функция для перехода в полноэкранный режим
-        function toggleFullScreen(element) {
-            element = element || document.documentElement;
-            
-            if (!document.fullscreenElement && !document.mozFullScreenElement &&
-                !document.webkitFullscreenElement && !document.msFullscreenElement) {
-                // Переход в полноэкранный режим
-                if (element.requestFullscreen) {
-                    element.requestFullscreen();
-                } else if (element.msRequestFullscreen) {
-                    element.msRequestFullscreen();
-                } else if (element.mozRequestFullScreen) {
-                    element.mozRequestFullScreen();
-                } else if (element.webkitRequestFullscreen) {
-                    element.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-                }
-            } else {
-                // Выход из полноэкранного режима
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.msExitFullscreen) {
-                    document.msExitFullscreen();
-                } else if (document.mozCancelFullScreen) {
-                    document.mozCancelFullScreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                }
-            }
-        }
-
         // Получаем IMDB ID из URL
         function getParameterByName(name) {
             var url = window.location.href;
@@ -132,6 +126,22 @@
 
         var imdbId = getParameterByName('imdb');
         var fullscreen = getParameterByName('fullscreen') === 'true';
+        
+        // Функция для имитации полноэкранного режима
+        function toggleCustomFullscreen() {
+            var playerElement = document.querySelector('.kinobox-player');
+            if (playerElement) {
+                playerElement.classList.toggle('fake-fullscreen');
+                
+                // Обновляем текст кнопки
+                var button = document.getElementById('custom-fullscreen-button');
+                if (playerElement.classList.contains('fake-fullscreen')) {
+                    button.textContent = '⤢';
+                } else {
+                    button.textContent = '⛶';
+                }
+            }
+        }
         
         if (imdbId) {
             // Инициализация плеера
@@ -175,10 +185,10 @@
                         // Скрываем экран загрузки
                         document.getElementById('loading').style.display = 'none';
                         
-                        // Пытаемся перейти в полноэкранный режим если параметр fullscreen=true
+                        // Если параметр fullscreen=true, активируем имитацию полноэкранного режима
                         if (fullscreen) {
                             setTimeout(function() {
-                                toggleFullScreen();
+                                toggleCustomFullscreen();
                             }, 1000);
                         }
                     }
@@ -186,19 +196,16 @@
             });
             
             // Обработчик для кнопки полноэкранного режима
-            document.getElementById('fullscreen-button').addEventListener('click', function() {
-                toggleFullScreen();
+            document.getElementById('custom-fullscreen-button').addEventListener('click', function() {
+                toggleCustomFullscreen();
             });
             
-            // Автоматический переход в полноэкранный режим при загрузке страницы если параметр fullscreen=true
-            if (fullscreen) {
-                document.addEventListener('DOMContentLoaded', function() {
-                    // Пытаемся перейти в полноэкранный режим
-                    setTimeout(function() {
-                        toggleFullScreen();
-                    }, 500);
-                });
-            }
+            // Обработка нажатия клавиши F для полноэкранного режима
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'f' || e.key === 'F') {
+                    toggleCustomFullscreen();
+                }
+            });
             
         } else {
             document.body.innerHTML = '<p class="error">Ошибка: Укажите IMDB ID в URL!</p>';
@@ -206,25 +213,7 @@
         
         // Обработка ориентации экрана на мобильных устройствах
         window.addEventListener('orientationchange', function() {
-            // Перезагрузка полноэкранного режима при изменении ориентации
-            setTimeout(function() {
-                if (document.fullscreenElement) {
-                    document.exitFullscreen().then(function() {
-                        setTimeout(function() {
-                            toggleFullScreen();
-                        }, 500);
-                    }).catch(function() {
-                        // Игнорируем ошибки
-                    });
-                }
-            }, 500);
-        });
-        
-        // Обработка нажатия клавиши F для полноэкранного режима
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'f' || e.key === 'F') {
-                toggleFullScreen();
-            }
+            // Ничего не делаем, CSS сам адаптируется
         });
     </script>
 </body>
