@@ -123,8 +123,63 @@
             margin: 5px 0 0 0;
             padding: 0;
         }
+        
+        /* Стили для имитации полноэкранного режима */
+        .fake-fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            z-index: 9999 !important;
+            background: #000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            overflow: hidden !important;
+        }
+        
+        .fake-fullscreen iframe {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        
+        #native-player-button {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 9999;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            outline: none;
+            display: none;
+        }
+        
+        #fullscreen-hint {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            color: white;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 9999;
+            display: none;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
     </style>
     <script src="https://kinobox.tv/kinobox.min.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div id="loading">
@@ -145,6 +200,8 @@
     
     <button id="back-button" title="Назад">←</button>
     <button id="custom-fullscreen-button" title="Полный экран">⛶</button>
+    <button id="native-player-button">Открыть в плеере</button>
+    <div id="fullscreen-hint">Для полного экрана используйте нативный плеер</div>
     
     <script>
         // Получаем параметры из URL
@@ -163,22 +220,62 @@
         var title = getParameterByName('title') || 'Фильм';
         var year = getParameterByName('year') || '';
         var rating = getParameterByName('rating') || '';
+        var videoUrl = ''; // Будет заполнено после загрузки плеера
         
         // Устанавливаем информацию о фильме
         document.getElementById('movie-title').textContent = title + (year ? ' (' + year + ')' : '');
         document.getElementById('movie-rating').textContent = rating ? 'Рейтинг: ' + rating : '';
         
+        // Расширяем Web App до максимального размера
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.expand();
+        }
+        
         // Функция для имитации полноэкранного режима
         function toggleCustomFullscreen() {
-            var playerContainer = document.getElementById('player-container');
+            var playerElement = document.querySelector('.kinobox-player') || document.getElementById('player');
             var movieInfo = document.getElementById('movie-info');
             
-            if (playerContainer.style.height === '100vh') {
-                playerContainer.style.height = '85vh';
-                movieInfo.style.opacity = '1';
+            // Расширяем Web App до максимального размера
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.expand();
+            }
+            
+            if (playerElement) {
+                playerElement.classList.toggle('fake-fullscreen');
+                
+                // Обновляем текст кнопки
+                var button = document.getElementById('custom-fullscreen-button');
+                if (playerElement.classList.contains('fake-fullscreen')) {
+                    button.textContent = '⤢';
+                    movieInfo.style.opacity = '0';
+                    document.getElementById('fullscreen-hint').style.display = 'block';
+                } else {
+                    button.textContent = '⛶';
+                    movieInfo.style.opacity = '1';
+                    document.getElementById('fullscreen-hint').style.display = 'none';
+                }
+            }
+        }
+        
+        // Пробуем использовать requestFullscreen на iframe
+        function tryNativeFullscreen() {
+            var playerIframe = document.querySelector('.kinobox-player iframe');
+            if (playerIframe) {
+                if (playerIframe.requestFullscreen) {
+                    playerIframe.requestFullscreen()
+                        .then(() => console.log('Fullscreen activated'))
+                        .catch(err => {
+                            console.error('Fullscreen error:', err);
+                            // Если requestFullscreen не поддерживается, используем имитацию
+                            toggleCustomFullscreen();
+                        });
+                } else {
+                    // Если requestFullscreen не поддерживается, используем имитацию
+                    toggleCustomFullscreen();
+                }
             } else {
-                playerContainer.style.height = '100vh';
-                movieInfo.style.opacity = '0';
+                toggleCustomFullscreen();
             }
         }
         
@@ -211,6 +308,13 @@
         // Обработчик для кнопки "Назад"
         document.getElementById('back-button').addEventListener('click', function() {
             window.history.back();
+        });
+        
+        // Обработчик для кнопки "Открыть в плеере"
+        document.getElementById('native-player-button').addEventListener('click', function() {
+            if (videoUrl && window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.openLink(videoUrl);
+            }
         });
         
         // Инициализация плеера
@@ -256,11 +360,20 @@
                 
                 if (status === 'error' || !sources || sources.length === 0) {
                     document.getElementById('player').innerHTML = '<div class="error">Ошибка: Фильм не найден или недоступен</div>';
-                } else if (fullscreen) {
-                    // Если параметр fullscreen=true, активируем полноэкранный режим
-                    setTimeout(function() {
-                        toggleCustomFullscreen();
-                    }, 1000);
+                } else {
+                    // Если есть источники видео, показываем кнопку для нативного плеера
+                    if (sources && sources.length > 0 && sources[0].url) {
+                        videoUrl = sources[0].url;
+                        document.getElementById('native-player-button').style.display = 'block';
+                        document.getElementById('native-player-button').textContent = 'Открыть в плеере';
+                    }
+                    
+                    if (fullscreen) {
+                        // Если параметр fullscreen=true, активируем полноэкранный режим
+                        setTimeout(function() {
+                            tryNativeFullscreen();
+                        }, 1000);
+                    }
                 }
             }
             
@@ -268,13 +381,8 @@
             
             // Обработчик для кнопки полноэкранного режима
             document.getElementById('custom-fullscreen-button').addEventListener('click', function() {
-                // Используем нашу кастомную функцию полноэкранного режима
-                toggleCustomFullscreen();
-                
-                // Также пробуем использовать нативный полноэкранный режим
-                // для мобильных устройств, если это возможно
-                var playerElement = document.getElementById('player-container');
-                toggleFullScreen(playerElement);
+                // Сначала пробуем нативный полноэкранный режим
+                tryNativeFullscreen();
             });
         });
     </script>
