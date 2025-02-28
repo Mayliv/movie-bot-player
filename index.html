@@ -2,29 +2,124 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Movie Player</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+        #player {
+            width: 100%;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+        }
+        .error {
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #fullscreen-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            z-index: 9998;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
     <script src="https://kinobox.tv/kinobox.min.js"></script>
 </head>
 <body>
+    <div id="loading">
+        <div class="spinner"></div>
+        <div>Загрузка плеера...</div>
+    </div>
     <div id="player"></div>
+    <button id="fullscreen-button" title="Полный экран">⛶</button>
+    
     <script>
-        // Получаем IMDB ID из URL (например, ?imdb=tt1375666)
-        var imdbId = getParameterByName('imdb');
-        if (imdbId) {
-            kbox('#player', {
-                search: {
-                    imdb: imdbId // Используем IMDB ID для поиска фильма
-                },
-                menu: {
-                    enable: true // Включаем меню для сериалов
+        // Функция для перехода в полноэкранный режим
+        function toggleFullScreen(element) {
+            element = element || document.documentElement;
+            
+            if (!document.fullscreenElement && !document.mozFullScreenElement &&
+                !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                // Переход в полноэкранный режим
+                if (element.requestFullscreen) {
+                    element.requestFullscreen();
+                } else if (element.msRequestFullscreen) {
+                    element.msRequestFullscreen();
+                } else if (element.mozRequestFullScreen) {
+                    element.mozRequestFullScreen();
+                } else if (element.webkitRequestFullscreen) {
+                    element.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
                 }
-            });
-        } else {
-            document.body.innerHTML = "<p>Ошибка: Укажите IMDB ID в URL!</p>";
+            } else {
+                // Выход из полноэкранного режима
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
         }
 
-        // Функция для извлечения параметров из URL
+        // Получаем IMDB ID из URL
         function getParameterByName(name) {
             var url = window.location.href;
             name = name.replace(/[\[\]]/g, '\\$&');
@@ -34,6 +129,103 @@
             if (!results[2]) return '';
             return decodeURIComponent(results[2].replace(/\+/g, ' '));
         }
+
+        var imdbId = getParameterByName('imdb');
+        var fullscreen = getParameterByName('fullscreen') === 'true';
+        
+        if (imdbId) {
+            // Инициализация плеера
+            kbox('#player', {
+                search: {
+                    imdb: imdbId
+                },
+                menu: {
+                    enable: true,
+                    default: 'menu_list',
+                    mobile: 'menu_button',
+                    format: '{N} :: {T} ({Q})',
+                    limit: null,
+                    open: true
+                },
+                players: {
+                    alloha: { 
+                        enable: true, 
+                        position: 1
+                    },
+                    cdnmovies: { 
+                        enable: true, 
+                        position: 2
+                    },
+                    kodik: { 
+                        enable: true, 
+                        position: 3
+                    },
+                    videocdn: { 
+                        enable: true, 
+                        position: 4
+                    }
+                },
+                params: {
+                    all: {
+                        autoplay: 1
+                    }
+                },
+                events: {
+                    playerLoaded: function(status, sources) {
+                        // Скрываем экран загрузки
+                        document.getElementById('loading').style.display = 'none';
+                        
+                        // Пытаемся перейти в полноэкранный режим если параметр fullscreen=true
+                        if (fullscreen) {
+                            setTimeout(function() {
+                                toggleFullScreen();
+                            }, 1000);
+                        }
+                    }
+                }
+            });
+            
+            // Обработчик для кнопки полноэкранного режима
+            document.getElementById('fullscreen-button').addEventListener('click', function() {
+                toggleFullScreen();
+            });
+            
+            // Автоматический переход в полноэкранный режим при загрузке страницы если параметр fullscreen=true
+            if (fullscreen) {
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Пытаемся перейти в полноэкранный режим
+                    setTimeout(function() {
+                        toggleFullScreen();
+                    }, 500);
+                });
+            }
+            
+        } else {
+            document.body.innerHTML = '<p class="error">Ошибка: Укажите IMDB ID в URL!</p>';
+        }
+        
+        // Обработка ориентации экрана на мобильных устройствах
+        window.addEventListener('orientationchange', function() {
+            // Перезагрузка полноэкранного режима при изменении ориентации
+            setTimeout(function() {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen().then(function() {
+                        setTimeout(function() {
+                            toggleFullScreen();
+                        }, 500);
+                    }).catch(function() {
+                        // Игнорируем ошибки
+                    });
+                }
+            }, 500);
+        });
+        
+        // Обработка нажатия клавиши F для полноэкранного режима
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'f' || e.key === 'F') {
+                toggleFullScreen();
+            }
+        });
     </script>
 </body>
 </html>
